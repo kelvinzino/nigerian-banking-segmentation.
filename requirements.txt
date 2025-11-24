@@ -1,0 +1,1 @@
+list of packages: streamlit, pandas, numpy, scikit-learn, altair
