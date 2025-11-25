@@ -1,2 +1,2 @@
-# nigerian-banking-segmentation.
+# nigerian-banking-segmentation
 Data Analysis
