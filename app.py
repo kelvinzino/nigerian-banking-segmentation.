@@ -3,58 +3,48 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-import altair as alt  # import at top
+import altair as alt
 
 st.title("Real Nigerian Retail Banking Customer Segmentation App")
 
-uploaded_file = st.file_uploader("Upload Banking CSV File", type="csv")
+# Load processed CSV directly from file path
+file_path = r"C:\Users\LENOVO\Documents\python_class\customer\processed_customers.csv"
+customer_df = pd.read_csv(file_path)
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+st.subheader("Original Processed Customer Data")
+st.write(customer_df.head())
 
-    df.drop(columns=["merchant_category_code", "merchant_name", "device_id"], inplace=True)
+# Scale data
+scaler = StandardScaler()
+x = scaler.fit_transform(customer_df[["total_amount", "avg_amount", "std_amount", "transaction_count"]])
 
-    customer_df = df.groupby("customer_id").agg({
-        "amount_ngn": ["sum", "mean", "std", "count"],
-    }).reset_index()
+# Train KMeans model
+kmeans = KMeans(n_clusters=3, random_state=42)
+customer_df["cluster"] = kmeans.fit_predict(x)
 
-    # rename columns
-    customer_df.columns = ["customer_id", "total_amount", "avg_amount", "std_amount", "transaction_count"]
+# Cluster names
+cluster_names = {
+    0: "Regular Retail Users",
+    1: "High Value Premium Customers",
+    2: "Frequent Business Users / Merchants"
+}
 
-    # Replace NaNs from std_amount with 0
-    customer_df.fillna(0, inplace=True)
+customer_df["Customer_Segment"] = customer_df["cluster"].map(cluster_names)
 
-    # Scale data
-    scaler = StandardScaler()
-    x = scaler.fit_transform(customer_df[["total_amount", "avg_amount", "std_amount", "transaction_count"]])
+# Show tables
+st.subheader("Clustered Customer Data")
+st.write(customer_df)
 
-    # Train KMeans model
-    kmeans = KMeans(n_clusters=3, random_state=42)
-    customer_df["cluster"] = kmeans.fit_predict(x)
+st.subheader("Number of Customers In Each Segment")
+st.write(customer_df["Customer_Segment"].value_counts())
 
-    # Cluster names
-    cluster_names = {
-        0: "Regular Retail Users",
-        1: "High Value Premium Customers",
-        2: "Frequent Business Users / Merchants"
-    }
+# Scatter plot
+st.subheader("Customer Segmentation Scatter Plot")
+chart = alt.Chart(customer_df).mark_circle(size=60).encode(
+    x='total_amount',
+    y='transaction_count',
+    color='Customer_Segment',
+    tooltip=['customer_id', 'total_amount', 'transaction_count', 'Customer_Segment']
+).interactive()
 
-    customer_df["Customer_Segment"] = customer_df["cluster"].map(cluster_names)
-
-    # Show tables
-    st.subheader("Clustered Customer Data")
-    st.write(customer_df)
-
-    st.subheader("Number of Customers In Each Segment")
-    st.write(customer_df["Customer_Segment"].value_counts())
-
-    # Scatter plot
-    st.subheader("Customer Segmentation Scatter Plot")
-    chart = alt.Chart(customer_df).mark_circle(size=60).encode(
-        x='total_amount',
-        y='transaction_count',
-        color='Customer_Segment',
-        tooltip=['customer_id', 'total_amount', 'transaction_count', 'Customer_Segment']
-    ).interactive()
-
-    st.altair_chart(chart, use_container_width=True)
+st.altair_chart(chart, use_container_width=True)
